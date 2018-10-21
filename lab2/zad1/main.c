@@ -27,7 +27,6 @@ long int validate_long_digit(char *string){
 			}
 		}
 	}
-	int k = n;
 	unsigned int t=0;
 	unsigned int mult=1;
 	for(int i = strlen(string)-1; i >= 0 ; i--){
@@ -69,7 +68,7 @@ void validate_file_open(int we,char* nazwa_pliku,char* err_otwarcia){
 	}
 }
 void validate_file_fopen(FILE * we,char* nazwa_pliku,char* err_otwarcia){
-	if(we){
+	if(!we){
 		fprintf(stderr,"%s: %s\n",nazwa_pliku,err_otwarcia);
 		exit(EXIT_FAILURE);
 	}
@@ -104,11 +103,12 @@ int main(int argc, char **argv){
 			int we,wy; 
 			wy=open(nazwa_pliku,O_WRONLY|O_TRUNC|O_CREAT,S_IRUSR|O_EXCL|S_IWUSR); 
 			validate_file_open(wy,nazwa_pliku,err_otwarcia);
-			we=open("/dev/random", O_RDONLY);
+			char * sciezka_rand = "/dev/urandom";
+			we=open(sciezka_rand, O_RDONLY);
 			validate_file_open(we,nazwa_pliku,err_otwarcia);
 			if(wy<0){
 				close(wy);
-				fprintf(stderr,"%s: %s\n","/dev/random",err_otwarcia);
+				fprintf(stderr,"%s: %s\n",sciezka_rand,err_otwarcia);
 				exit(EXIT_FAILURE);
 			}
 			for(int i=0;i<n;i++){
@@ -118,7 +118,7 @@ int main(int argc, char **argv){
 					if(liczyt<0){
 						close(wy);
 						close(we);
-						fprintf(stderr,"%s: %s\n","/dev/random",err_czytania);
+						fprintf(stderr,"%s: %s\n",sciezka_rand,err_czytania);
 						exit(EXIT_FAILURE);
 					}
 					if(ln==sizeof(blok)){
@@ -152,50 +152,51 @@ int main(int argc, char **argv){
 			if(strcmp(argv[5], "sys") == 0){
 					int fd=open(nazwa_pliku,O_RDWR);
 					validate_file_open(fd,nazwa_pliku,err_otwarcia);
-					for(int i=lseek(fd,n,0);lseek(fd,0,SEEK_CUR)<n*r;i=lseek(fd,i+n,SEEK_SET)){
+					for(int i=lseek(fd,n,SEEK_SET);lseek(fd,0,SEEK_CUR)<n*r;i=lseek(fd,i+n,SEEK_SET)){
 						read(fd,blok1,n);
-						lseek(fd,-n,1);
+						lseek(fd,-n,SEEK_CUR);
 						int j=i-n;
 						while(j>=0){
-								lseek(fd,j,0);
+								lseek(fd,j,SEEK_SET);
 								read(fd,blok2,n);
-								lseek(fd,-n,1);
+								lseek(fd,-n,SEEK_CUR);
 								if(blok2[0]<=blok1[0]){
 									break;
 								}
-								lseek(fd,j+n,0);
+								lseek(fd,j+n,SEEK_SET);
 								write(fd,blok2,n);
-								lseek(fd,-n,1);
+								lseek(fd,-n,SEEK_CUR);
 								j=j-n;
 						}
-						lseek(fd,j+n,0);
+						lseek(fd,j+n,SEEK_SET);
 						write(fd,blok1,n);
-						lseek(fd,-n,1);
+						lseek(fd,-n,SEEK_CUR);
 					}
 					close(fd);
 			}
 			else if(strcmp(argv[5], "lib") == 0){
 				FILE * fd2=fopen(nazwa_pliku,"r+");
 				validate_file_fopen(fd2,nazwa_pliku,err_otwarcia);
-				for(int i=fseek(fd2,n,0);fseek(fd2,0,SEEK_CUR)<n*r;i=fseek(fd2,i+n,SEEK_SET)){
+				for(int i=n;i<n*r;i+=n){
+					fseek(fd2,i,SEEK_SET);
 					fread(blok1,n,1,fd2);
-					fseek(fd2,-n,1);
+					fseek(fd2,-n,SEEK_CUR);
 					int j=i-n;
 					while(j>=0){
-							fseek(fd2,j,0);
+							fseek(fd2,j,SEEK_SET);
 							fread(blok2,n,1,fd2);
-							fseek(fd2,-n,1);
+							fseek(fd2,-n,SEEK_CUR);
 							if(blok2[0]<=blok1[0]){
 								break;
 							}
-							fseek(fd2,j+n,0);
+							fseek(fd2,j+n,SEEK_SET);
 							fwrite(blok2,n,1,fd2);
-							fseek(fd2,-n,1);
+							fseek(fd2,-n,SEEK_CUR);
 							j=j-n;
 					}
-					fseek(fd2,j+n,0);
+					fseek(fd2,j+n,SEEK_SET);
 					fwrite(blok1,n,1,fd2);
-					fseek(fd2,-n,1);
+					fseek(fd2,-n,SEEK_CUR);
 				}
 				fclose(fd2);
 			}
@@ -213,19 +214,17 @@ int main(int argc, char **argv){
 			validate_byte(n);
 			unsigned int r = validate_long_digit(argv[4]);
 			validate_record(r);
-			unsigned char blok1[n];
+			char bufor[n];
 		if (strcmp(argv[6], "sys")==0){
 					int plik1=open(nazwa_pliku1,O_RDONLY);
 					validate_file_open(plik1,nazwa_pliku1,err_otwarcia);
 					int plik2=open(nazwa_pliku2,O_WRONLY|O_TRUNC|O_CREAT,S_IRUSR|O_EXCL|S_IWUSR);
 					validate_file_open(plik2,nazwa_pliku2,err_otwarcia);
-					char bufor[n];
 					int size;
 					for(int i=0;i<r;i++){
 						size=read(plik1,bufor,n);
 						write(plik2,bufor,size);
 					}
-					while(size);
 					close(plik1);
 					close(plik2);
 		}
@@ -234,11 +233,9 @@ int main(int argc, char **argv){
 					validate_file_fopen(fplik1,nazwa_pliku1,err_otwarcia);
 					FILE * fplik2=fopen(nazwa_pliku2,"w+");
 					validate_file_fopen(fplik2,nazwa_pliku2,err_otwarcia);
-					char fbufor[n];
-					int fsize;
 					for(int i=0;i<r;i++){
-						fsize=fread(fbufor,n,1,fplik1);
-						fwrite(fbufor,fsize,1,fplik2);
+						fread(bufor,n,1,fplik1);
+						fwrite(bufor,n,1,fplik2);
 					}
 
 					fclose(fplik1);
