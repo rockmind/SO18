@@ -1,12 +1,13 @@
 #define _GNU_SOURCE
-#define _XOPEN_SOURCE
 
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
 #include<dirent.h>
-#include <ftw.h>
+#include<ftw.h>
+#include<unistd.h>
+
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 #define ERR_N_ARGS   "Błędna liczba argumentów programu"
@@ -77,112 +78,59 @@ void validate_arguments(int argc, char **argv){
 		exit(EXIT_FAILURE);
 	}
 }
-//void validate_dir(char* dirname, DIR* dir){
-//	if(!dir){
-//		fprintf(stderr,"%s: %s\n",dirname,ERR_dir);
-//		exit(EXIT_FAILURE);
-//	}
-//}
-//void czytaj(char* dirname,DIR* katalog,int data_put, char eq){
-//	struct stat path_stat;
-//	struct dirent* plik=readdir(katalog);
-//	char* nazwa_pliku;
-//	chdir(dirname);
-//	while(plik){
-//		nazwa_pliku=plik->d_name;
-//		lstat(nazwa_pliku, &path_stat);
-//		if(strcmp(nazwa_pliku, ".") != 0 && strcmp(nazwa_pliku, "..") != 0 && !S_ISLNK(path_stat.st_mode)){
-//			if(S_ISDIR(path_stat.st_mode)){
-//				DIR* katalog2 = opendir(nazwa_pliku);
-//				validate_dir(nazwa_pliku,katalog2);
-//				czytaj(nazwa_pliku,katalog2,data_put,eq);
-//				closedir(katalog2);
-//			}
-//			else if(S_ISREG(path_stat.st_mode)){
-//				struct tm* tm_file;
-//				tm_file=gmtime(&path_stat.st_mtime);
-//				int data_file=10000*(tm_file->tm_year + 1900) + 100*(1+tm_file->tm_mon) + (tm_file->tm_mday);
-//				int flaga=0;
-//				switch(eq){
-//					case '=':
-//						if(data_file==data_put){
-//							flaga=1;
-//						}
-//						break;
-//					case '>':
-//						if(data_file>data_put){
-//							flaga=1;
-//						}
-//						break;
-//					case '<':
-//						if(data_file<data_put){
-//							flaga=1;
-//						}
-//						break;
-//				}
-//				if(flaga){
-//					printf("%s/%s \t%jd\t -",get_current_dir_name(),nazwa_pliku,path_stat.st_size);
-//					printf( (path_stat.st_mode & S_IRUSR) ? "r" : "-");
-//					printf( (path_stat.st_mode & S_IWUSR) ? "w" : "-");
-//					printf( (path_stat.st_mode & S_IXUSR) ? "x" : "-");
-//					printf( (path_stat.st_mode & S_IRGRP) ? "r" : "-");
-//					printf( (path_stat.st_mode & S_IWGRP) ? "w" : "-");
-//					printf( (path_stat.st_mode & S_IXGRP) ? "x" : "-");
-//					printf( (path_stat.st_mode & S_IROTH) ? "r" : "-");
-//					printf( (path_stat.st_mode & S_IWOTH) ? "w" : "-");
-//					printf( (path_stat.st_mode & S_IXOTH) ? "x" : "-");
-//					printf("\t%d-%02d-%02d\n",1900+tm_file->tm_year,1+tm_file->tm_mon,tm_file->tm_mday);
-//				}
-//			}
-//		}
-//		plik=readdir(katalog);
-//	}
-//	chdir("..");
-//}
-int fn(const char *filename, const struct stat *statptr, int fileflags, struct FTW *pfwt){
-	printf("%s\n",filename);
-	return 0;
-}
-//typedef int (*tmp_func) (int, char, const char *, const struct stat*, int, struct FTW*);
-//typedef int (*func) (const char *, const struct stat*, int, struct FTW*);
-//
-//func pass_fn(tmp_func f,int data, int znak){
-//	int g(const char *filename, const struct stat *statptr, int fileflags, struct FTW *pfwt){
-//		return f(data, znak, filename, statptr, fileflags, pfwt);
-//	}
-//	return g;
-//}
-//
-//int fn(int data, char znak,const char *filename, const struct stat *statptr, int fileflags, struct FTW *pfwt){
-//	printf("%s\n",filename);
-//	return 0;
-//}
-//
-int (*fg(int (*ft)(int, char, const char *, const struct stat*, int, struct FTW*), int data, char znak)) (const char *, const struct stat*, int, struct FTW*)
-{
-	printf("b=%d \n",data);
-	int g(const char *filename, const struct stat *statptr, int fileflags, struct FTW *pfwt){
-			printf("DDD\n");
-		return ft(data,znak,filename,statptr,fileflags,pfwt);
+int ec_nftw(const char* dirname,int nopenfd, int flags, int data_puts,char znak){
+	
+	int fn(const char *filename, const struct stat *statptr, int fileflags, struct FTW *pfwt){
+		struct tm* tm_file;
+		tm_file=gmtime(&statptr->st_mtime);
+		int data_file=10000*(tm_file->tm_year + 1900) + 100*(1+tm_file->tm_mon) + (tm_file->tm_mday);
+		int flaga=1;
+		switch(znak){
+			case '=':
+				if(data_file==data_puts){
+					flaga=1;
+				}
+				break;
+			case '>':
+				if(data_file>data_puts){
+					flaga=1;
+				}
+				break;
+			case '<':
+				if(data_file<data_puts){
+					flaga=1;
+				}
+				break;
+		}
+		if(fileflags==FTW_F && flaga){
+			printf( "%-80s\t%-10jd-",filename,statptr->st_size);
+			printf( (statptr->st_mode & S_IRUSR) ? "r" : "-");
+			printf( (statptr->st_mode & S_IWUSR) ? "w" : "-");
+			printf( (statptr->st_mode & S_IXUSR) ? "x" : "-");
+			printf( (statptr->st_mode & S_IRGRP) ? "r" : "-");
+			printf( (statptr->st_mode & S_IWGRP) ? "w" : "-");
+			printf( (statptr->st_mode & S_IXGRP) ? "x" : "-");
+			printf( (statptr->st_mode & S_IROTH) ? "r" : "-");
+			printf( (statptr->st_mode & S_IWOTH) ? "w" : "-");
+			printf( (statptr->st_mode & S_IXOTH) ? "x" : "-");
+			printf("\t%d-%02d-%02d\n",1900+tm_file->tm_year,1+tm_file->tm_mon,tm_file->tm_mday);
+		}
+		return 0;
 	}
-   return g;
+	nftw(dirname,fn,nopenfd,flags);
+	return 1;
 }
-
-
 int main(int argc, char **argv){
 	validate_arguments(argc, argv);
-	
-	
-	//const char* date_arg = argv[3];
-	//struct tm tm_arg;
-	//strptime(date_arg, "%Y-%m-%d", &tm_arg);
-	//int data_puts=10000*(1900+tm_arg.tm_year) + 100*(1+tm_arg.tm_mon) + (tm_arg.tm_mday);
-	char* dirname = argv[1];
-	int (*wfn)(const char *filename, const struct stat *statptr, int fileflags, struct FTW *pfwt);
-	wfn=fg(fn,2018,'a');
-	wnf("Aaaa",NULL,1,NULL);
-//	nftw(dirname,fn,1,FTW_F);
-	nftw(dirname,wfn,1,FTW_F);
-
+	const char* dirname = argv[1];
+	char znak= argv[2][0];
+	const char* date_arg = argv[3];
+	struct tm tm_arg;
+	strptime(date_arg, "%Y-%m-%d", &tm_arg);
+	int data_puts=10000*(1900+tm_arg.tm_year) + 100*(1+tm_arg.tm_mon) + (tm_arg.tm_mday);
+	char *a = malloc((PATH_MAX+1)*sizeof(char));
+	const char* dirname2 = realpath(dirname, a);
+	ec_nftw(dirname2,1,FTW_DEPTH|FTW_PHYS,data_puts,znak);
+	free(a);
 	exit(EXIT_SUCCESS);
 }

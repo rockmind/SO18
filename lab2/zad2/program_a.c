@@ -1,15 +1,12 @@
 #define _GNU_SOURCE
-#define _XOPEN_SOURCE
 
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
 #include<dirent.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include<sys/stat.h>
+#include<unistd.h>
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
@@ -59,7 +56,6 @@ void validate_arguments(int argc, char **argv){
 	if(yy>=1900 && yy<=9999){
 		if(mm>=1 && mm<=12)
 		{
-			//check days
 			if( !(
 					((dd>=1 && dd<=31) && (mm==1 || mm==3 || mm==5 || mm==7 || mm==8 || mm==10 || mm==12))
 				  ||((dd>=1 && dd<=30) && (mm==4 || mm==6 || mm==9 || mm==11))
@@ -124,8 +120,13 @@ void czytaj(char* dirname,DIR* katalog,int data_put, char eq){
 						}
 						break;
 				}
+				char *sciezka = malloc((PATH_MAX+1)*sizeof(char));
+				strcpy(sciezka,get_current_dir_name());
+				strcpy(sciezka+strlen(sciezka),"/");
+				strcpy(sciezka+strlen(sciezka), nazwa_pliku);
 				if(flaga){
-					printf("%s/%s \t%jd\t -",get_current_dir_name(),nazwa_pliku,path_stat.st_size);
+					printf( "%-80s\t%-10jd-",sciezka,path_stat.st_size);
+					free(sciezka);
 					printf( (path_stat.st_mode & S_IRUSR) ? "r" : "-");
 					printf( (path_stat.st_mode & S_IWUSR) ? "w" : "-");
 					printf( (path_stat.st_mode & S_IXUSR) ? "x" : "-");
@@ -153,37 +154,6 @@ int main(int argc, char **argv){
 	DIR* katalog = opendir(dirname);
 	validate_dir(dirname,katalog);
 	czytaj(dirname,katalog,data_puts,argv[2][0]);
-	//struct stat path_stat;
-	//struct dirent* plik=readdir(katalog);
-	//while(plik){
-	//	stat(plik->d_name, &path_stat);
-	//	//	S_ISREG(path_stat.st_mode);
-	//	printf("%s dir? %d\n",plik->d_name,!S_ISREG(path_stat.st_mode));
-	//	plik=readdir(katalog);
-	//}
-    //chdir("all");
-    //chdir("..");
-    //printf("Current working dir: %s\n", get_current_dir_name());
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	closedir(katalog);
 	exit(EXIT_SUCCESS);
 }
