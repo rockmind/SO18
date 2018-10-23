@@ -1,0 +1,3 @@
+ls -lah
+pwd
+date -d 20180101 +%Y-%m-%d
