@@ -8,13 +8,12 @@
 #include <sys/wait.h>
 
 int main(int argc, char **argv){
-	
 	FILE *plik;
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t nread;
 	if (argc != 2) {
-		fprintf(stderr, "%s: Za dużo argumętów\n", argv[0]);
+		fprintf(stderr, "%s: Bledna liczba argumetow\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 	
@@ -23,60 +22,66 @@ int main(int argc, char **argv){
 		perror("fopen");
 		exit(EXIT_FAILURE);
 	}
-	int i=0;
 	while ((nread = getline(&line, &len, plik)) != -1) {
-		int size=0;
+		size_t size=0;
+		int emptyline=0;
 		for(int k=1;k<nread;k++){
-			if(isspace(line[k-1]) && !isspace(line[k])){
-				size++;
+			if(isspace(line[k])){
+				line[k]=' ';
+				emptyline++;
 			}
+			else{
+				if(isspace(line[k-1])){
+					size++;
+				}
+			}
+		}
+		if(emptyline>=strlen(line)-1){
+			continue;
 		}
 		char ** program;
 		program =(char**) malloc((size+2)*sizeof(*program));
-		char *ch;
-		ch = strtok(line, " ");
-		int j=0;
-		while(ch != NULL) {
-			program[j]= malloc(strlen(ch)+1);
-			strcpy(program[j],ch);
-			//program[j][strlen(ch)]='\0';
-			program[j][strlen(ch)+1]=NULL;
-			ch = strtok(NULL, " ");
-			j++;
+		int size2=0;
+		int inc=0;
+		for(int k=0;k<nread;k++){
+			if(!isspace(line[k])){
+				size2++;
+				if(isspace(line[k+1])||(k==nread-1)){
+					program[inc]=malloc(size2+1);
+					strncpy(program[inc],line+(k-size2+1),size2);
+					program[inc][size2+1]='\0';
+					inc++;
+				}
+			}
+			else{
+				size2=0;
+			}
 		}
-		program[j]=NULL;
-		char* const* av = (char* const*)malloc(sizeof(program));
-		// = {"ls", "-l", NULL};
-		//for(int k=0;k<=j;k++){
-		//	strcpy(av[k],program[k]);
-		//	fprintf(stderr,"%d %s",k,program[k]);
-		//}
-		av =program;
+		program[inc]=NULL;
 		int status;
 		pid_t child_pid;
 		child_pid = fork();
 		if(child_pid==0) {
 			int child_status=0;
-			printf(" PID=%d \n",(int)getpid());
-			child_status=execlp(av[0],av[0],NULL);
+			child_status=execvp(program[0],program);
 			exit(child_status);
 		}
 		else{
 			waitpid(child_pid,&status,WUNTRACED);
 			if(status!=0){
+				free(line);
+				fclose(plik);
 				fprintf(stderr,"Błąd polecenia:");
-				for(int k=0;k<j;k++){
-					fprintf(stderr," %s ",program[k]);
+				for(int k=0;k<inc;k++){
+					fprintf(stderr,"aa %s",program[k]);
 				}
+				fprintf(stderr,"\n");
 				exit(EXIT_FAILURE);
 			}
 		}
 		free(program);
-		i++;
 	}
-
 	free(line);
 	fclose(plik);
 	exit(EXIT_SUCCESS);
-
 }

@@ -10,13 +10,13 @@
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
-#define ERR_N_ARGS   "Błędna liczba argumentów programu"
-#define ERR_2_ARGS   "Błędna drugi argument. Możliwe: '>', '<', '='"
-#define ERR_3_ARGS   "Błędna trzeci argument. Zły format lub błędna data. Możliwy format: yyyy-MM-dd"
-#define ERR_3_ARGS_Y "Błędna trzeci argument. Błędny rok"
-#define ERR_3_ARGS_D "Błędna trzeci argument. Błędny dzień"
-#define ERR_3_ARGS_M "Błędna trzeci argument. Błędny miesiąc"
-#define ERR_dir      "Nie można otworzyć katalogu"
+#define ERR_N_ARGS   "Bledna liczba argumentow programu"
+#define ERR_2_ARGS   "Bledna drugi argument. Mozliwe: '>', '<', '='"
+#define ERR_3_ARGS   "Bledna trzeci argument. Zly format lub bledna data. Mozliwy format: yyyy-MM-dd"
+#define ERR_3_ARGS_Y "Bledna trzeci argument. Bledny rok"
+#define ERR_3_ARGS_D "Bledna trzeci argument. Bledny dzien"
+#define ERR_3_ARGS_M "Bledna trzeci argument. Bledny miesiac"
+#define ERR_dir      "Nie mozna otworzyc katalogu"
 
 void validate_arguments(int argc, char **argv){
 	if(argc!=4){

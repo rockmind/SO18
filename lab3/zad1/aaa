@@ -1,0 +1,5 @@
+date
+pwd
+ls -lah
+echo aaa
+wc -l interpreter.c
