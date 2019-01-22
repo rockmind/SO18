@@ -1,0 +1,110 @@
+Program skapilowalem przy urzyciu polecenia:
+gcc -std=c99 -Wall program.c -o program
+
+Ze wzgledu na czas generowania danych losowych skorzystalem z /dev/urandom.
+Program rowniez poprawnie dziala na /dev/random.
+
+Do sortowania generowalem pliki po 1000 i 4000 rekordow:
+./program generate dane_4_4000    4000 4
+./program generate dane_4_1000    1000 4
+./program generate dane_512_4000  4000 512
+./program generate dane_512_1000  1000 512
+./program generate dane_4096_4000 4000 4096
+./program generate dane_4096_1000 1000 4096
+./program generate dane_8192_4000 4000 8192
+./program generate dane_8192_1000 1000 8192
+
+Pomiary czasow sortowania dla nastepujacyh polecen:
+
+cp dane_4_1000    dane && time ./program sort dane 1000    4 lib        cp dane_4_1000    dane && time ./program sort dane 1000    4 sys
+real    0m1.857s                                                        real    0m0.718s
+user    0m0.269s                                                        user    0m0.072s
+sys     0m1.588s                                                        sys     0m0.646s
+
+cp dane_4_4000    dane && time ./program sort dane 4000    4 lib        cp dane_4_4000    dane && time ./program sort dane 4000    4 sys
+real    0m28.020s                                                       real    0m10.947s
+user    0m4.250s                                                        user    0m1.060s
+sys     0m23.767s                                                       sys     0m9.886s
+
+cp dane_512_4000  dane && time ./program sort dane 4000  512 lib        cp dane_512_4000  dane && time ./program sort dane 4000  512 sys
+real    0m27.459s                                                       real    0m12.382s
+user    0m4.317s                                                        user    0m1.108s
+sys     0m23.140s                                                       sys     0m11.273s
+
+cp dane_512_1000  dane && time ./program sort dane 1000  512 lib        cp dane_512_1000  dane && time ./program sort dane 1000  512 sys
+real    0m1.774s                                                        real    0m0.763s
+user    0m0.297s                                                        user    0m0.076s
+sys     0m1.477s                                                        sys     0m0.687s
+
+cp dane_4960_1000 dane && time ./program sort dane 1000 4096 lib        cp dane_4960_1000 dane && time ./program sort dane 1000 4096 sys
+real    0m1.228s                                                        real    0m1.114s
+user    0m0.169s                                                        user    0m0.067s
+sys     0m1.059s                                                        sys     0m1.046s
+
+cp dane_4960_4000 dane && time ./program sort dane 4000 4096 lib        cp dane_4960_4000 dane && time ./program sort dane 4000 4096 sys
+real    0m22.802s                                                       real    0m21.968s
+user    0m2.608s                                                        user    0m1.106s
+sys     0m20.187s                                                       sys     0m20.857s
+
+cp dane_8192_4000 dane && time ./program sort dane 4000 8192 lib        cp dane_8192_4000 dane && time ./program sort dane 4000 8192 sys
+real    0m34.822s                                                       real    0m35.708s
+user    0m2.758s                                                        user    0m1.122s
+sys     0m32.058s                                                       sys     0m34.578s
+
+cp dane_8192_1000 dane && time ./program sort dane 1000 8192 lib        cp dane_8192_1000 dane && time ./program sort dane 1000 8192 sys
+real    0m2.259s                                                        real    0m2.079s
+user    0m0.190s                                                        user    0m0.079s
+sys     0m2.068s                                                        sys     0m2.000s
+
+
+Pomiary czasow kopiowania dla nastepujacyh polecen:
+
+rm dane && time ./program copy dane_4_1000    dane 1000    4 lib        rm dane && time ./program copy dane_4_1000    dane 1000    4 sys
+real    0m0.003s                                                        real    0m0.004s
+user    0m0.000s                                                        user    0m0.001s
+sys     0m0.003s                                                        sys     0m0.003s
+
+rm dane && time ./program copy dane_4_4000    dane 4000    4 lib        rm dane && time ./program copy dane_4_4000    dane 4000    4 sys
+real    0m0.003s                                                        real    0m0.012s
+user    0m0.001s                                                        user    0m0.001s
+sys     0m0.002s                                                        sys     0m0.011s
+
+rm dane && time ./program copy dane_512_4000  dane 4000  512 lib        rm dane && time ./program copy dane_512_4000  dane 4000  512 sys
+real    0m0.006s                                                        real    0m0.012s
+user    0m0.001s                                                        user    0m0.000s
+sys     0m0.005s                                                        sys     0m0.012s
+
+rm dane && time ./program copy dane_512_1000  dane 1000  512 lib        rm dane && time ./program copy dane_512_1000  dane 1000  512 sys
+real    0m0.003s                                                        real    0m0.004s
+user    0m0.001s                                                        user    0m0.000s
+sys     0m0.003s                                                        sys     0m0.004s
+
+rm dane && time ./program copy dane_4960_1000 dane 1000 4096 lib        rm dane && time ./program copy dane_4960_1000 dane 1000 4096 sys
+real    0m0.009s                                                        real    0m0.009s
+user    0m0.001s                                                        user    0m0.000s
+sys     0m0.009s                                                        sys     0m0.009s
+
+rm dane && time ./program copy dane_4960_4000 dane 4000 4096 lib        rm dane && time ./program copy dane_4960_4000 dane 4000 4096 sys
+real    0m0.030s                                                        real    0m0.028s
+user    0m0.002s                                                        user    0m0.001s
+sys     0m0.028s                                                        sys     0m0.028s
+
+rm dane && time ./program copy dane_8192_4000 dane 4000 8192 lib        rm dane && time ./program copy dane_8192_4000 dane 4000 8192 sys
+real    0m0.056s                                                        real    0m0.049s
+user    0m0.003s                                                        user    0m0.002s
+sys     0m0.053s                                                        sys     0m0.048s
+
+rm dane && time ./program copy dane_8192_1000 dane 1000 8192 lib        rm dane && time ./program copy dane_8192_1000 dane 1000 8192 sys
+real    0m0.016s                                                        real    0m0.013s
+user    0m0.001s                                                        user    0m0.001s
+sys     0m0.015s                                                        sys     0m0.013s
+
+
+Sortowanie przy uzyciu funkcji systemowych jest znaczaco szybsze dla malych rakordow.
+Wraz ze wzrostem pojemnosci rekordow czas sortowanie przy pomocy funkcji bibliotecznych
+zrownywal sie z czasem sortowania przy pomocy funkcji systemowych.
+Dla plikow o rekordzie 8192 czas sortowania przy pomocy funkcji bibliotecznych
+byl mniejszy niz przy pomocy funkcji systemowch.
+
+Dla kopiowania sytuacja odwrotna. Dla sprawdzanych plikow czasy kopiowania roznily sie
+nieznacznie w zaleznosci od wybranych funkcji.

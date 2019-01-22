@@ -1,0 +1,12 @@
+s	// char napis[100];
+	// time_t t=tp1.tv_sec;
+	// tpp1=gmtime(&t);
+    // char c_time_string[11];
+	
+    // strftime (c_time_string,11,"%s",tpp1);
+	// printf("S= %s\n",c_time_string);
+	// printf("S= %ld\n",tp1.tv_nsec);
+	
+	// c_time_string =ctime(&(tp2.tv_sec));
+	// printf("Time %s\n",c_time_string);
+	// exit(EXIT_SUCCESS);
