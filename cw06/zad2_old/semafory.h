@@ -10,12 +10,12 @@
 #define DODAJ  -1
 #define ODEJM 1
 
+clockid_t clk_id;
+struct timespec tp1;
 
-
-char * czas();
-void zablokuj(int semid);
-void odblokuj(int semid);
+void zwolnijKolejke(int semid);
+void czekajZajmijKolejke(int semid);
+void zwolnijKolejkeCzekaj(int semid);
 void zasnij(int semid);
 void obudz(int semid);
-int czyspi(int semid);
 #endif

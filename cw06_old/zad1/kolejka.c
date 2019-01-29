@@ -5,41 +5,39 @@
 #include "kolejka.h"
 #include "semafory.h"
 
-void kolejkaInitcjalizuj(kolejka* q,int maxSize,pid_t barber){
+void queueInit( struct queue* q, int maxSize,pid_t barber){
 	q->barber=barber;
 	q->maxSize = maxSize;
 	q->busySize = 0;
 	q->specialChair=0;
-	q->first=0;
+	// q->chairs=chairs;
 	int i=0;
 	while(i<maxSize){
 		q->chairs[i]=0;
 		i++;
 	}
-	// return q;
 };
 
-int kolejkaWejdz(kolejka* q){
+int  queuePut(struct queue* q){
 	if( (q->maxSize) > (q->busySize)){
 		pid_t client = getpid();
-		int *krzesla=q->chairs;
+		int *k=q->chairs;
 		int miejsce;
 		if(q->busySize==0){
 			miejsce=0;
-			krzesla[miejsce]=client;
+			k[miejsce]=client;
 			q->first=miejsce;
 		}
 		else{
 			miejsce=(q->busySize+q->first)%((q->maxSize));
-			krzesla[miejsce]=client;
+			k[miejsce]=client;
 		}
 		q->busySize++;
 		return miejsce;
 	}
 	return -1;
 };
-
-pid_t kolejkaZdejmij(kolejka* q){
+pid_t queuePop(struct queue* q){
 	if(q->busySize==0){
 		return -1;
 	}
@@ -51,13 +49,13 @@ pid_t kolejkaZdejmij(kolejka* q){
 	return pid;
 };
 
-pid_t kolejkaSprawdz(kolejka* q){
+pid_t queueGet(struct queue* q){
 	if(q->busySize==0){
 		return -1;
 	}
 	return q->chairs[q->first];
 };
-int kolejkaPusta(kolejka* q){
+int queueIsEmpty(struct queue* q){
 	if(q->busySize>0){
 		return 0;
 	}
@@ -65,23 +63,3 @@ int kolejkaPusta(kolejka* q){
 		return 1;
 	}
 };
-pid_t kolejkaKrzesloSprawdz(kolejka* q){
-	return q->specialChair;
-};
-void kolejkaKrzesloWejdz(kolejka* q){
-	q->specialChair=getpid();
-};
-void kolejkaKrzesloZejdz(kolejka* q){
-	q->specialChair=0;
-};
-int   kolejkaKrzesloPuste(kolejka* q){
-	if(q->specialChair!=0){
-		return 0;
-	}
-	return 1;
-};
-pid_t kolejkaKrzesloZdejmij(kolejka* q){
-	pid_t pid = q->specialChair;
-	q->specialChair=0;
-	return pid;
-}
