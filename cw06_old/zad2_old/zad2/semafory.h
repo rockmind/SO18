@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <signal.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -21,7 +22,7 @@ Semafor 2 - czekanie na strzyrzenie
 union sigval emptyValue;
 
 pid_t mojPid;
-sem_t *semid[6];
+sem_t *semid[3];
 char * name;
 size_t roz;
 int fd;
@@ -33,14 +34,7 @@ void zasnij(sem_t * semid[]);
 void obudz(sem_t * semid[]);
 int czyspi(sem_t * semid[]);
 
-void czekajNaStrzyzenie1(sem_t * semid[]);
-void zaproszenieNaStrzyzenie1(sem_t * semid[]);
-void czekajNaStrzyzenie2(sem_t * semid[]);
-void zaproszenieNaStrzyzenie2(sem_t * semid[]);
-void czekajAzKlientBedzieGotow(sem_t * semid[]);
-void jestemGotowDoStrzyrzenia(sem_t * semid[]);
-void czekajNaKoniecStrzyrzenia(sem_t * semid[]);
-void strzyrzenie(sem_t * semid[]);
-void czekajAzKlientWyjdzie(sem_t * semid[]);
-void wychodzeKlient(sem_t * semid[]);
+void czekajNaStrzyzenie(sem_t * semid[]);
+void zaproszenieNaStrzyzenie(sem_t * semid[]);
+
 #endif

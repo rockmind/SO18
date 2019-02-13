@@ -1,5 +1,17 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include <signal.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <sys/stat.h>
+#include <sys/ipc.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
@@ -7,14 +19,39 @@
 #include "kolejka.h"
 #include "semafory.h"
 
+
+
+kolejka * k;
+pid_t mojPid;
+union sigval emptyValue;
+
+int shmid;
+int semid;
+void czekaj(){
+	clockid_t clk_id = CLOCK_MONOTONIC;
+	struct timespec tp;
+	time_t t1=tp.tv_sec;
+	time_t t2=tp.tv_sec+2;
+	while(t1<t2){
+		clock_gettime(clk_id,&tp);
+		t1=tp.tv_sec;
+	}
+}
+
+
 void wejdzNaKrzeslo(){
 	zablokuj(semid);
-	kolejkaKrzesloWejdz(k,mojPid);
+	kolejkaKrzesloWejdz(k);
 	printf("Czas: %s PID=%ld Klient    wchodzi na krzeslo do strzyzenia\n"        ,czas(),(long) mojPid);
 	odblokuj(semid);
-	jestemGotowDoStrzyrzenia(semid);
+	sigqueue(k->barber, SIGRTMAX,emptyValue);
 };
-
+void zejdzZeKrzeslo(){
+	zablokuj(semid);
+	kolejkaKrzesloZejdz(k);
+	odblokuj(semid);
+	sigqueue(k->barber, SIGRTMIN,emptyValue);
+}
 int myAtoi(char * string){
 	char z = string[0];
 	int k=atoi(string);
@@ -31,23 +68,29 @@ int main(int argc, char *argv[]){
 	}
 	int S=myAtoi(argv[2]);
 	int K=myAtoi(argv[1])-1;
-
-	//Tworzenie i inicjalizowanie kolejki
-	name="kolejka";
-	fd = shm_open(name,O_RDWR,  S_IRUSR|S_IWUSR);
-	roz = lseek(fd, 0, SEEK_END) - lseek(fd, 0, SEEK_SET);
-	ftruncate(fd, roz);
-	k = (kolejka *) mmap(NULL, roz, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	
-	//Tworzenie semaforow
-	semid[0]=sem_open("semKol",O_RDWR,S_IRUSR|S_IWUSR,1);//0 odpowiada za operacje na kolejce (1 zajeta, 0 wolna)
-	semid[1]=sem_open("semSen",O_RDWR,S_IRUSR|S_IWUSR,0);//1 odpowiada za stan golibrody (1 spi, 0 nie spi)
-	semid[2]=sem_open("semSt1",O_RDWR,S_IRUSR|S_IWUSR,0);
-	semid[3]=sem_open("semSt2",O_RDWR,S_IRUSR|S_IWUSR,0);
-	semid[4]=sem_open("semKl1",O_RDWR,S_IRUSR|S_IWUSR,0);//Klient daje znac ze jest gotow
-	semid[5]=sem_open("semKl2",O_RDWR,S_IRUSR|S_IWUSR,0);
-	semid[6]=sem_open("semKl3",O_RDWR,S_IRUSR|S_IWUSR,0);
+	key_t key = ftok("KluczDoZakladu.key", 'K');
+	shmid = shmget(key, 0, 0);
+	k = (kolejka *) shmat(shmid, NULL, 0);
+	semid = semget(key, 0, S_IRUSR|S_IWUSR);
+	if(semid==-1){
+		fprintf(stderr,"Nie udalo sie wczytac smaforow\n");
+		exit(EXIT_FAILURE);
+	}
 
+	struct sigaction act1;
+	act1.sa_handler=wejdzNaKrzeslo;
+	sigemptyset(&act1.sa_mask);
+	// act1.sa_flags = SA_NODEFER;
+	sigaction(SIGRTMAX,&act1,NULL);
+	// signal(SIGRTMAX, wejdzNaKrzeslo);
+	
+	struct sigaction act2;
+	act2.sa_handler=zejdzZeKrzeslo;
+	sigemptyset(&act2.sa_mask);
+	// act2.sa_flags = SA_NODEFER;
+	sigaction(SIGRTMIN,&act2,NULL);
+	// signal(SIGRTMIN, zejdzZeKrzeslo);
 	int i;
 	pid_t rodzicPid = getpid();
 	for(i=0;i<K;i++){
@@ -56,78 +99,51 @@ int main(int argc, char *argv[]){
 		}
 	}
 	mojPid=getpid();
-	int wolne;
-	int nr=0;
 	while(S>0){
 		zablokuj(semid);
 		if(kolejkaPusta(k)){
 			if(czyspi(semid) && kolejkaKrzesloPuste(k)){
 				printf("Czas: %s PID=%ld Klient    budzi Golibrode %ld\n"                     ,czas(),(long) mojPid,(long)k->barber);
 				obudz(semid);
-				kolejkaKrzesloWejdz(k,mojPid);
+				kolejkaKrzesloWejdz(k);
 				odblokuj(semid);
-				czekajNaStrzyzenie1(semid);
-				wejdzNaKrzeslo();
+				pause();
 			}
 			else{
-				if(kolejkaWejdz(k)==-1){
+				if(kolejkaWejdz(k)==-1){//DO ZMIANY
 					printf("Czas: %s PID=%ld Klient    wychodzi z powodu braku miejsc w kolejce\n",czas(),(long) mojPid);
 					odblokuj(semid);
+					czekaj();
 					continue;
 				}
 				else{
 					printf("Czas: %s PID=%ld Klient    zajmuje miejsce w kolejce\n"               ,czas(),(long) mojPid);
 				}
-				wolne=czyJestemNaKrzesle(k,mojPid);
 				odblokuj(semid);
-				while(wolne){
-					zablokuj(semid);
-					wolne=czyJestemNaKrzesle(k,mojPid);
-					odblokuj(semid);
-				};
-				czekajNaStrzyzenie2(semid);
-				wejdzNaKrzeslo();
+				pause();
 			}
 		}
 		else{
 			if(kolejkaWejdz(k)==-1){
 				printf("Czas: %s PID=%ld Klient    wychodzi z powodu braku miejsc w kolejce\n",czas(),(long) mojPid);
 				odblokuj(semid);
+				czekaj();
 				continue;
 			};
 			printf("Czas: %s PID=%ld Klient    zajmuje miejsce w kolejce\n"               ,czas(),(long) mojPid);
-			wolne=czyJestemNaKrzesle(k,mojPid);
 			odblokuj(semid);
-			while(wolne){
-				zablokuj(semid);
-				wolne=czyJestemNaKrzesle(k,mojPid);
-				odblokuj(semid);
-			};
-			czekajNaStrzyzenie2(semid);
-			wejdzNaKrzeslo();
+			pause();
 		}
-		czekajNaKoniecStrzyrzenia(semid);
-		zablokuj(semid);
-		kolejkaKrzesloZejdz(k);
-		odblokuj(semid);
-		wychodzeKlient(semid);
-		nr++;
+		pause();
 		S--;
-		printf("Czas: %s PID=%ld Klient    wychodzi po zakonczeniu strzyzenia %d\n"      ,czas(),(long) mojPid,nr);
+		printf("Czas: %s PID=%ld Klient    wychodzi po zakonczeniu strzyzenia %d\n"      ,czas(),(long) mojPid,S);
 	}
-
-	munmap(k,roz);
-	sem_close(semid[0]);
-	sem_close(semid[1]);
-	sem_close(semid[2]);
-	sem_close(semid[3]);
-	sem_close(semid[4]);
-	sem_close(semid[5]);
-	sem_close(semid[6]);
+	shmdt(k);
 	if(rodzicPid==mojPid){
+		waitpid(0,NULL,WNOHANG);
 		int status = 0;
 		pid_t wpid;
 		while ((wpid = wait(&status)) > 0);
 	}
-	return EXIT_SUCCESS;
+	exit(EXIT_SUCCESS);
 }

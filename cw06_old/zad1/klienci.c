@@ -1,17 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include <signal.h>
-#include <unistd.h>
-#include <string.h>
-
-#include <sys/stat.h>
-#include <sys/ipc.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
-
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
@@ -19,39 +6,14 @@
 #include "kolejka.h"
 #include "semafory.h"
 
-clockid_t clk_id = CLOCK_MONOTONIC;
 
-struct queue * k;
-pid_t mojPid;
-
-void czekaj(){
-	struct timespec tp;
-	time_t t1=tp.tv_sec;
-	time_t t2=tp.tv_sec+7;
-	while(t1<t2){
-		clock_gettime(clk_id,&tp);
-		t1=tp.tv_sec;
-	}
-}
-
-void doStrzyrzenia(int sig){
-	struct timespec tp;
-	clock_gettime(clk_id,&tp);
-	printf("Czas: %ld,%09ld PID=%ld Klient    wchodzi na krzeslo do strzyzenia\n",(long)tp.tv_sec,tp.tv_nsec,(long) mojPid);
-	kill(k->barber,SIGUSR2);
-}
-void poStrzyrzeniu(int sig){
-	struct timespec tp;
-	clock_gettime(clk_id,&tp);
-	printf("Czas: %ld,%09ld PID=%ld Klient    wychodzi po zakonczeniu strzyzenia\n",(long)tp.tv_sec,tp.tv_nsec,(long) mojPid);
-	kill(k->barber,SIGUSR2);
-	time_t t1=tp.tv_sec;
-	time_t t2=tp.tv_sec+10;
-	while(t1<t2){
-		clock_gettime(clk_id,&tp);
-		t1=tp.tv_sec;
-	}
-}
+void wejdzNaKrzeslo(){
+	zablokuj(semid);
+	kolejkaKrzesloWejdz(k,mojPid);
+	printf("Czas: %s PID=%ld Klient    wchodzi na krzeslo do strzyzenia\n"        ,czas(),(long) mojPid);
+	odblokuj(semid);
+	jestemGotowDoStrzyrzenia(semid);
+};
 int myAtoi(char * string){
 	char z = string[0];
 	int k=atoi(string);
@@ -67,18 +29,16 @@ int main(int argc, char *argv[]){
 		exit(EXIT_FAILURE);
 	}
 	int S=myAtoi(argv[2]);
-	int K=myAtoi(argv[1]);
+	int K=myAtoi(argv[1])-1;
 	
 	key_t key = ftok("KluczDoZakladu.key", 'K');
-	int shmid = shmget(key, 0, 0);
-	k = (struct queue *) shmat(shmid, NULL, 0);
-	int semid = semget(key, 0, S_IRUSR|S_IWUSR);
+	shmid = shmget(key, 0, 0);
+	k = (kolejka *) shmat(shmid, NULL, 0);
+	semid = semget(key, 0, S_IRUSR|S_IWUSR);
 	if(semid==-1){
 		fprintf(stderr,"Nie udalo sie wczytac smaforow\n");
 		exit(EXIT_FAILURE);
 	}
-	signal(SIGUSR1, doStrzyrzenia);
-	signal(SIGUSR2, poStrzyrzeniu);
 
 	int i;
 	pid_t rodzicPid = getpid();
@@ -88,43 +48,71 @@ int main(int argc, char *argv[]){
 		}
 	}
 	mojPid=getpid();
-	struct timespec tp1;
+	int wolne;
+	int nr=0;
 	while(S>0){
-		czekajZajmijKolejke(semid);//Czekaj i zajmij kolejke
-		if(semctl(semid,SEN_ID,GETVAL,0)>0 && (k->specialChair)==0)//Sprawdzam czy golibroda spi, >0 spi
-		{
-			k->specialChair=getpid();
-				clock_gettime(clk_id,&tp1);
-				printf("Czas: %ld,%09ld PID=%ld Klient    budzi Golibrode %ld\n",(long)tp1.tv_sec,tp1.tv_nsec,(long) mojPid,(long)k->barber);
-			
-			kill(k->barber,SIGUSR1);
-			zwolnijKolejke(semid);//Zwolnij kolejke
-			pause();//Czeka na sygnal ze moze wejsc na krzeslo do strzyrzenia
-			S--;
-			pause();//Czeka na sygnal ze strzyzenie zakonczone
-			
-		}
-		else{
-			if(queuePut(k)==-1){
-					clock_gettime(clk_id,&tp1);
-					printf("Czas: %ld,%09ld PID=%ld Klient    wychodzi z powodu braku miejsc w kolejce\n",(long)tp1.tv_sec,tp1.tv_nsec,(long) mojPid);
-				zwolnijKolejke(semid);//Zwolnij kolejke
-				czekaj();
-				continue;
+		zablokuj(semid);
+		if(kolejkaPusta(k)){
+			if(czyspi(semid) && kolejkaKrzesloPuste(k)){
+				printf("Czas: %s PID=%ld Klient    budzi Golibrode %ld\n"                     ,czas(),(long) mojPid,(long)k->barber);
+				obudz(semid);
+				kolejkaKrzesloWejdz(k,mojPid);
+				odblokuj(semid);
+				czekajNaStrzyzenie1(semid);
+				wejdzNaKrzeslo();
 			}
 			else{
-					clock_gettime(clk_id,&tp1);
-					printf("Czas: %ld,%09ld PID=%ld Klient    zajmuje miejsce w kolejce\n",(long)tp1.tv_sec,tp1.tv_nsec,(long) mojPid);
-				zwolnijKolejke(semid);//Zwolnij kolejke
-				pause();//Czeka na sygnal ze moze wejsc na krzeslo do strzyrzenia
-				S--;
-				pause();//Czeka na sygnal ze strzyzenie zakonczone
+				if(kolejkaWejdz(k)==-1){//DO ZMIANY
+					printf("Czas: %s PID=%ld Klient    wychodzi z powodu braku miejsc w kolejce\n",czas(),(long) mojPid);
+					odblokuj(semid);
+					continue;
+				}
+				else{
+					printf("Czas: %s PID=%ld Klient    zajmuje miejsce w kolejce\n"               ,czas(),(long) mojPid);
+				}
+				wolne=czyJestemNaKrzesle(k,mojPid);
+				odblokuj(semid);
+				while(wolne){
+					zablokuj(semid);
+					wolne=czyJestemNaKrzesle(k,mojPid);
+					odblokuj(semid);
+				};
+				czekajNaStrzyzenie2(semid);
+				wejdzNaKrzeslo();
 			}
 		}
+		else{
+			if(kolejkaWejdz(k)==-1){
+				printf("Czas: %s PID=%ld Klient    wychodzi z powodu braku miejsc w kolejce\n",czas(),(long) mojPid);
+				odblokuj(semid);
+				continue;
+			};
+			printf("Czas: %s PID=%ld Klient    zajmuje miejsce w kolejce\n"               ,czas(),(long) mojPid);
+			wolne=czyJestemNaKrzesle(k,mojPid);
+			odblokuj(semid);
+			while(wolne){
+				zablokuj(semid);
+				wolne=czyJestemNaKrzesle(k,mojPid);
+				odblokuj(semid);
+			};
+			czekajNaStrzyzenie2(semid);
+			wejdzNaKrzeslo();
+		}
+		czekajNaKoniecStrzyrzenia(semid);
+		zablokuj(semid);
+		kolejkaKrzesloZejdz(k);
+		odblokuj(semid);
+		wychodzeKlient(semid);
+		nr++;
+		S--;
+		printf("Czas: %s PID=%ld Klient    wychodzi po zakonczeniu strzyzenia %d\n"      ,czas(),(long) mojPid,nr);
 	}
 	shmdt(k);
 	if(rodzicPid==mojPid){
 		waitpid(0,NULL,WNOHANG);
+		int status = 0;
+		pid_t wpid;
+		while ((wpid = wait(&status)) > 0);
 	}
 	exit(EXIT_SUCCESS);
 }

@@ -10,6 +10,8 @@ typedef struct kolejka{
 	pid_t chairs[];
 } kolejka;
 
+kolejka * k;
+
 void  kolejkaInitcjalizuj(kolejka * q,int maxSize,pid_t barber);
 
 int   kolejkaWejdz         (kolejka* q);

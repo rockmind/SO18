@@ -1,0 +1,32 @@
+rm -f ./zaklad ./klienci
+gcc -Wall  zaklad.c kolejka.c semafory.c -lpthread -lrt -o zaklad
+gcc -Wall  klienci.c kolejka.c semafory.c -lpthread -lrt -o klienci
+
+
+TESTING: URUCHOMIENIE ZAKLADU GOLIBRODY
+
+
+cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 > KluczDoZakladu.key
+./zaklad 5 &
+
+
+test2: .test2 aaa
+
+
+
+
+TESTING: URUCHOMIENIE KLIENTOW
+
+
+./klienci 6 20
+Czas: 1304481,941247479 PID=2312 Golibroda zasypia
+Czas: 1304481,945454366 PID=2312 Golibroda budzi sie
+Czas: 1304481,945476843 PID=2312 Golibroda zaprasza               klienta 2322
+Czas: 1304481,945789558 PID=2312 Golibroda rozpozczyna strzyzenie klienta 2322
+Czas: 1304481,945791248 PID=2312 Golibroda konczy strzyzenie      klienta 2322
+Czas: 1304481,945814726 PID=2312 Golibroda zaprasza               klienta 2324
+Czas: 1304481,945861102 PID=2312 Golibroda rozpozczyna strzyzenie klienta 2324
+Czas: 1304481,945862397 PID=2312 Golibroda konczy strzyzenie      klienta 2324
+Czas: 1304481,945881766 PID=2312 Golibroda zaprasza               klienta 0
+
+Czas: 1304490,989098253 PID=2312 Golibroda - Odebrano SIGINT

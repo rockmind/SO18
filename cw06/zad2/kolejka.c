@@ -1,6 +1,3 @@
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
 #include <sys/types.h>
 #include "kolejka.h"
 #include "semafory.h"
@@ -12,13 +9,18 @@ void kolejkaInitcjalizuj(kolejka* q,int maxSize,pid_t barber){
 	q->specialChair=0;
 	q->first=0;
 	int i=0;
-	while(i<maxSize){
+	while(i<=maxSize){
 		q->chairs[i]=0;
 		i++;
 	}
 	// return q;
 };
-
+int czyJestemNaKrzesle(kolejka* q,pid_t mypid){
+	if(q->specialChair==mypid){
+		return 1;
+	}
+	return 0;
+};
 int kolejkaWejdz(kolejka* q){
 	if( (q->maxSize) > (q->busySize)){
 		pid_t client = getpid();
@@ -45,7 +47,7 @@ pid_t kolejkaZdejmij(kolejka* q){
 	}
 	int f=q->first;
 	pid_t pid = q->chairs[f];
-	q->first++;
+	q->first=(q->first+1)%q->maxSize;
 	q->chairs[f]=0;
 	q->busySize--;
 	return pid;
@@ -68,8 +70,8 @@ int kolejkaPusta(kolejka* q){
 pid_t kolejkaKrzesloSprawdz(kolejka* q){
 	return q->specialChair;
 };
-void kolejkaKrzesloWejdz(kolejka* q){
-	q->specialChair=getpid();
+void kolejkaKrzesloWejdz(kolejka* q,pid_t mypid){
+	q->specialChair=mypid;
 };
 void kolejkaKrzesloZejdz(kolejka* q){
 	q->specialChair=0;
